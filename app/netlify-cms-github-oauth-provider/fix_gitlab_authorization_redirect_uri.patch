@@ -1,0 +1,39 @@
+diff --git a/auth.js b/auth.js
+index ceea337..0d15c09 100644
+--- a/auth.js
++++ b/auth.js
+@@ -1,12 +1,16 @@
+ const randomstring = require('randomstring')
+ 
+-module.exports = (oauth2) => {
+-  // Authorization uri definition
+-  const authorizationUri = oauth2.authorizeURL({
+-    redirectURI: process.env.REDIRECT_URL,
++module.exports = (oauth2, oauthProvider) => {
++  var options = {
+     scope: process.env.SCOPES || 'repo,user',
+     state: randomstring.generate(32)
+-  })
++  }
++  // GitLab uses `redirect_uri` as query parameter name: https://docs.gitlab.com/ee/api/oauth2.html
++  const propertyKey = oauthProvider === 'gitlab' ? 'redirect_uri' : 'redirectURI'
++  options[propertyKey] = process.env.REDIRECT_URL
++
++  // Authorization uri definition
++  const authorizationUri = oauth2.authorizeURL(options)
+ 
+   return (req, res, next) => {
+     res.redirect(authorizationUri)
+diff --git a/index.js b/index.js
+index b7defb8..a3cd3be 100644
+--- a/index.js
++++ b/index.js
+@@ -27,7 +27,7 @@ function indexMiddleWare (req, res) {
+ }
+ 
+ module.exports = {
+-  auth: authMiddleWareInit(oauth2),
++  auth: authMiddleWareInit(oauth2, oauthProvider),
+   callback: callbackMiddleWareInit(oauth2, oauthProvider),
+   success: (req, res) => { res.send('') },
+   index: indexMiddleWare
